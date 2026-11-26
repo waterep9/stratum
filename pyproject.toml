@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stratum-object-store"
+version = "0.1.0"
+description = "Stratum —— 分层内容寻址对象存储服务"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pyyaml>=6.0"]
+
+[project.scripts]
+stratum-api = "stratum.main:run"
+stratum-worker = "stratum.worker:run"
+
+[tool.setuptools.packages.find]
+include = ["stratum*"]
+
+[tool.setuptools.package-data]
+stratum = ["schema.sql", "web/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

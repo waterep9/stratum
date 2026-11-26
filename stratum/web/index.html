@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stratum · 对象存储控制台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6feb'/%3E%3Cpath d='M8 11l8-4 8 4-8 4-8-4zm0 5l8 4 8-4v6l-8 4-8-4v-6z' fill='white' opacity='.9'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e3e6ec;
+    --text: #1b2430;
+    --muted: #6b7789;
+    --accent: #2f6feb;
+    --accent-soft: #eaf1ff;
+    --ok: #1a7f4b;
+    --warn: #b26a00;
+    --danger: #c0392b;
+    --mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.55 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  header {
+    display: flex; align-items: center; gap: 16px; padding: 12px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 16px; }
+  .logo {
+    width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+    display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 700;
+  }
+  .brand small { font-weight: 400; color: var(--muted); font-size: 12px; }
+  header .spacer { flex: 1; }
+  .token-box { display: flex; align-items: center; gap: 8px; }
+  input, select, button, textarea { font: inherit; color: inherit; }
+  input[type=text], input[type=password], input[type=number], select {
+    border: 1px solid var(--border); border-radius: 7px; padding: 6px 9px; background: #fff; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  button {
+    border: 1px solid var(--border); background: #fff; border-radius: 7px;
+    padding: 6px 12px; cursor: pointer; transition: .15s;
+  }
+  button:hover { border-color: #c8cfda; background: #fbfcfe; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #2560d4; }
+  button.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  button.danger { color: var(--danger); border-color: #f0d4d0; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  main { display: grid; grid-template-columns: 208px 1fr; gap: 18px; padding: 18px 20px 40px; max-width: 1400px; }
+  nav { position: sticky; top: 70px; align-self: start; display: flex; flex-direction: column; gap: 4px; }
+  nav a {
+    padding: 8px 12px; border-radius: 8px; color: var(--muted); font-weight: 500;
+  }
+  nav a.active { background: var(--accent-soft); color: var(--accent); }
+  nav a:hover { background: #eef1f6; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 16px;
+  }
+  .panel h2 { margin: 0 0 4px; font-size: 15px; }
+  .panel .hint { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .stat { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: #fcfdff; }
+  .stat .k { color: var(--muted); font-size: 12px; }
+  .stat .v { font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: none; }
+  tbody tr:hover { background: #fafbfd; }
+  td.mono, .mono { font-family: var(--mono); font-size: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row.tight { gap: 6px; }
+  .pill {
+    display: inline-block; padding: 1px 8px; border-radius: 20px; font-size: 11.5px;
+    background: #eef1f6; color: var(--muted);
+  }
+  .pill.ok { background: #e7f6ee; color: var(--ok); }
+  .pill.warn { background: #fdf3e2; color: var(--warn); }
+  .pill.bad { background: #fbeae8; color: var(--danger); }
+  .muted { color: var(--muted); }
+  .toast {
+    position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast div {
+    background: #1b2430; color: #fff; padding: 9px 14px; border-radius: 8px; font-size: 13px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .18); max-width: 420px;
+  }
+  .toast div.bad { background: #8f2b20; }
+  .bar { height: 6px; background: #edf0f5; border-radius: 4px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  pre {
+    background: #0f1723; color: #d7e3f4; padding: 12px 14px; border-radius: 10px;
+    overflow: auto; font-family: var(--mono); font-size: 12px; line-height: 1.5; margin: 0;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } main { grid-template-columns: 1fr; } nav { position: static; flex-direction: row; } }
+  .empty { padding: 18px; text-align: center; color: var(--muted); font-size: 13px; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .kv { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; font-size: 13px; }
+  .kv .k { color: var(--muted); }
+  code.inline { background: #eef1f6; padding: 1px 6px; border-radius: 5px; font-family: var(--mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">S</div><div>Stratum <small>内容寻址对象存储</small></div></div>
+  <div class="spacer"></div>
+  <div class="token-box">
+    <input id="token" type="password" placeholder="管理令牌" style="width:190px" />
+    <button id="saveToken">保存</button>
+    <span id="conn" class="pill">未连接</span>
+  </div>
+</header>
+
+<main>
+  <nav>
+    <a href="#overview" data-view="overview" class="active">概览</a>
+    <a href="#objects" data-view="objects">对象浏览</a>
+    <a href="#upload" data-view="upload">上传</a>
+    <a href="#presign" data-view="presign">预签名</a>
+    <a href="#ops" data-view="ops">运维与审计</a>
+  </nav>
+
+  <div id="views">
+    <!-- 概览 -->
+    <section data-panel="overview">
+      <div class="panel">
+        <h2>存储概览</h2>
+        <p class="hint">逻辑容量按版本累计；物理容量是去重后的实际分片占用。两者比值即去重收益。</p>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content: space-between; margin-bottom: 10px">
+          <h2 style="margin:0">桶（Bucket）</h2>
+          <div class="row tight">
+            <input id="newBucket" type="text" placeholder="新桶名，如 media-prod" style="width:200px" />
+            <select id="newBucketVersioning">
+              <option value="1">开启版本化</option>
+              <option value="0">关闭版本化</option>
+            </select>
+            <button class="primary" id="createBucket">创建</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>名称</th><th>版本化</th><th>对象数</th><th>逻辑容量</th><th>配额</th><th>生命周期</th><th></th></tr></thead>
+          <tbody id="bucketRows"><tr><td colspan="7" class="empty">加载中…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 对象 -->
+    <section data-panel="objects" hidden>
+      <div class="panel">
+        <div class="toolbar">
+          <select id="bucketSelect" style="min-width:180px"></select>
+          <input id="prefix" type="text" placeholder="前缀过滤，如 logs/2026" style="width:240px" />
+          <button id="reloadObjects">刷新</button>
+          <span class="spacer" style="flex:1"></span>
+          <span class="muted" id="objectMeta"></span>
+        </div>
+        <table>
+          <thead><tr><th>键</th><th>大小</th><th>类型</th><th>ETag</th><th>创建时间</th><th></th></tr></thead>
+          <tbody id="objectRows"><tr><td colspan="6" class="empty">选择一个桶查看对象</td></tr></tbody>
+        </table>
+        <div class="row" style="margin-top:12px">
+          <button id="prevPage" disabled>上一页</button>
+          <button id="nextPage" disabled>下一页</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>版本历史</h2>
+        <p class="hint">版本化桶中每次覆盖都会产生新版本；删除只写入删除标记。分页令牌由服务端签发。</p>
+        <table>
+          <thead><tr><th>键</th><th>版本 ID</th><th>大小</th><th>类型</th><th>创建时间</th><th></th></tr></thead>
+          <tbody id="versionRows"><tr><td colspan="6" class="empty">暂无版本数据</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 上传 -->
+    <section data-panel="upload" hidden>
+      <div class="panel">
+        <h2>单次 PUT 上传</h2>
+        <p class="hint">整对象一次提交；服务端按 1 MiB 切片写入 CAS，同内容分片自动去重。</p>
+        <div class="row">
+          <select id="uploadBucket" style="min-width:180px"></select>
+          <input id="uploadKey" type="text" placeholder="对象键，如 docs/readme.md" style="width:280px" />
+          <input id="uploadFile" type="file" />
+          <button class="primary" id="doPut">上传</button>
+        </div>
+        <div class="bar" style="margin-top:12px"><i id="putBar"></i></div>
+        <div class="muted mono" id="putResult" style="margin-top:8px"></div>
+      </div>
+      <div class="panel">
+        <h2>分片上传（multipart）</h2>
+        <p class="hint">适合大文件与断点续传：init → 逐片 PUT → complete。完成后服务端按序切片入 CAS；重复 complete 幂等返回同一版本。</p>
+        <div class="row">
+          <select id="mpBucket" style="min-width:180px"></select>
+          <input id="mpKey" type="text" placeholder="对象键，如 video/demo.bin" style="width:280px" />
+          <input id="mpFile" type="file" />
+          <button class="primary" id="doMp">分片上传</button>
+        </div>
+        <div class="bar" style="margin-top:12px"><i id="mpBar"></i></div>
+        <div class="muted mono" id="mpResult" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <!-- 预签名 -->
+    <section data-panel="presign" hidden>
+      <div class="panel">
+        <h2>签发预签名 URL</h2>
+        <p class="hint">签名串为 <code class="inline">METHOD\nBUCKET\nKEY\nEXPIRES\nACCESS_KEY</code> 的 HMAC-SHA256。仅访问密钥可签发，管理令牌不行。</p>
+        <div class="row">
+          <input id="pKey" type="text" placeholder="对象键" style="width:260px" />
+          <select id="pMethod"><option>GET</option><option>PUT</option></select>
+          <input id="pAccess" type="text" placeholder="访问密钥 AK..." style="width:180px" />
+          <button id="doPresign">签名</button>
+        </div>
+        <pre id="presignOut" style="margin-top:12px">等待生成…</pre>
+      </div>
+      <div class="panel">
+        <h2>访问密钥</h2>
+        <p class="hint">密钥只在创建时返回一次，服务端仅保存 SHA-256 摘要。grants 形如 <code class="inline">[{"bucket":"media","perm":"rw"}]</code>。</p>
+        <div class="row">
+          <input id="keyLabel" type="text" placeholder="标签，如 ci-bot" style="width:160px" />
+          <input id="keyGrants" type="text" value='[{"bucket":"*","perm":"r"}]' style="width:280px" />
+          <button class="primary" id="doIssueKey">签发密钥</button>
+        </div>
+        <pre id="keyOut" style="margin-top:12px">尚未签发</pre>
+      </div>
+    </section>
+
+    <!-- 运维 -->
+    <section data-panel="ops" hidden>
+      <div class="panel">
+        <h2>维护任务</h2>
+        <p class="hint">GC 回收无引用分片；生命周期按策略过期对象；巡检复算分片哈希；对账修复引用计数与用量。</p>
+        <div class="row tight">
+          <button data-job="gc">运行 GC</button>
+          <button data-job="lifecycle">执行生命周期</button>
+          <button data-job="scrub">完整性巡检</button>
+          <button data-job="reconcile">计数器对账</button>
+          <button data-job="webhook">投递 Webhook</button>
+          <button data-job="orphans">扫描孤儿文件</button>
+        </div>
+        <pre id="jobOut" style="margin-top:12px">尚未运行</pre>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content: space-between">
+          <h2 style="margin:0">审计日志</h2>
+          <button id="reloadAudit">刷新</button>
+        </div>
+        <p class="hint">所有写操作与维护动作在同一事务内落审计，可按 bucket / action 过滤。</p>
+        <table>
+          <thead><tr><th>时间</th><th>主体</th><th>动作</th><th>桶/键</th><th>状态</th><th>详情</th></tr></thead>
+          <tbody id="auditRows"><tr><td colspan="6" class="empty">加载中…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = {
+  token: localStorage.getItem('stratum_token') || '',
+  bucket: '',
+  nextToken: null,
+  prevStack: [],
+};
+const el = (id) => document.getElementById(id);
+
+function toast(msg, bad) {
+  const box = el('toast');
+  const item = document.createElement('div');
+  item.textContent = msg;
+  if (bad) item.className = 'bad';
+  box.appendChild(item);
+  setTimeout(() => item.remove(), 4200);
+}
+
+function fmtBytes(n) {
+  if (n === null || n === undefined) return '-';
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let i = 0, v = Number(n);
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return (i === 0 ? v : v.toFixed(1)) + ' ' + units[i];
+}
+
+async function api(path, opts = {}) {
+  const headers = Object.assign({}, opts.headers || {});
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  if (opts.json !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(opts.json);
+  }
+  const res = await fetch(path, { method: opts.method || 'GET', headers, body: opts.body });
+  if (res.status === 204) return null;
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (e) { data = { raw: text }; }
+  if (!res.ok) {
+    const msg = data && data.error ? data.error.code + ': ' + data.error.message : ('HTTP ' + res.status);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+/* ---------------- 概览 ---------------- */
+async function loadOverview() {
+  try {
+    const data = await api('/admin/overview');
+    const dedup = data.logical_bytes > 0
+      ? (100 * (1 - data.chunk_bytes_live / Math.max(data.logical_bytes, 1))).toFixed(0) : '0';
+    el('stats').innerHTML = [
+      ['桶数量', data.buckets],
+      ['当前对象', data.objects],
+      ['版本总数', data.versions],
+      ['逻辑容量', fmtBytes(data.logical_bytes)],
+      ['物理分片', data.chunks_live + ' / ' + data.chunks_total],
+      ['物理占用', fmtBytes(data.chunk_bytes_live)],
+      ['去重收益', dedup + '%'],
+      ['坏分片', data.chunks_corrupt],
+      ['未完成上传', data.open_uploads],
+      ['待投递事件', (data.outbox || {}).PENDING || 0],
+    ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    el('conn').textContent = '已连接';
+    el('conn').className = 'pill ok';
+    renderBuckets(data.buckets_detail || []);
+  } catch (e) {
+    el('conn').textContent = '未连接';
+    el('conn').className = 'pill bad';
+    toast(e.message, true);
+  }
+}
+
+function renderBuckets(buckets) {
+  const rows = el('bucketRows');
+  if (!buckets.length) { rows.innerHTML = '<tr><td colspan="7" class="empty">还没有桶，先创建一个</td></tr>'; }
+  else {
+    rows.innerHTML = buckets.map(b => `<tr>
+      <td class="mono">${b.name}</td>
+      <td>${b.versioning ? '<span class="pill ok">开启</span>' : '<span class="pill">关闭</span>'}</td>
+      <td>${b.object_count}</td>
+      <td>${fmtBytes(b.used_bytes)}</td>
+      <td>${b.quota_bytes ? fmtBytes(b.quota_bytes) : '不限'}</td>
+      <td class="mono muted">${Object.keys(b.lifecycle || {}).length ? JSON.stringify(b.lifecycle) : '-'}</td>
+      <td style="text-align:right"><button class="ghost" data-open="${b.name}">浏览</button></td>
+    </tr>`).join('');
+    rows.querySelectorAll('[data-open]').forEach(btn => btn.onclick = () => {
+      state.bucket = btn.dataset.open; location.hash = '#objects'; render();
+    });
+  }
+  const options = buckets.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
+  ['bucketSelect', 'uploadBucket', 'mpBucket'].forEach(id => {
+    const cur = el(id).value;
+    el(id).innerHTML = options;
+    if (cur) el(id).value = cur;
+  });
+  if (!el('bucketSelect').value && buckets.length) el('bucketSelect').value = buckets[0].name;
+}
+
+/* ---------------- 对象 ---------------- */
+async function loadObjects(reset) {
+  const bucket = el('bucketSelect').value;
+  if (!bucket) return;
+  state.bucket = bucket;
+  if (reset) { state.nextToken = null; state.prevStack = []; }
+  const prefix = el('prefix').value.trim();
+  const qs = new URLSearchParams({ prefix, limit: '25' });
+  if (state.nextToken) qs.set('continuation', state.nextToken);
+  try {
+    const data = await api(`/v1/buckets/${bucket}/objects?` + qs.toString());
+    const rows = el('objectRows');
+    rows.innerHTML = data.items.length ? data.items.map(o => `<tr>
+      <td class="mono">${escapeHtml(o.key)}</td>
+      <td>${fmtBytes(o.size)}</td>
+      <td class="muted">${escapeHtml(o.content_type || '-')}</td>
+      <td class="mono muted">${(o.etag || '').slice(0, 12)}…</td>
+      <td class="muted">${o.created_at.slice(0, 19)}</td>
+      <td style="text-align:right">
+        <button class="ghost" data-dl="${escapeAttr(o.key)}">下载</button>
+        <button class="ghost danger" data-del="${escapeAttr(o.key)}">删除</button>
+      </td></tr>`).join('') : '<tr><td colspan="6" class="empty">没有对象</td></tr>';
+    el('objectMeta').textContent = `共 ${data.count} 条${data.is_truncated ? '（还有更多）' : ''}`;
+    el('nextPage').disabled = !data.is_truncated;
+    el('prevPage').disabled = state.prevStack.length === 0;
+    rows.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => downloadObject(b.dataset.dl));
+    rows.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteObject(b.dataset.del));
+    if (data.is_truncated) state.nextTokenNext = data.next_token; else state.nextTokenNext = null;
+    loadVersions(bucket, prefix);
+  } catch (e) { toast(e.message, true); }
+}
+
+async function loadVersions(bucket, prefix) {
+  try {
+    const data = await api(`/v1/buckets/${bucket}/versions?prefix=${encodeURIComponent(prefix)}&limit=12`);
+    const rows = el('versionRows');
+    rows.innerHTML = data.items.length ? data.items.map(v => `<tr>
+      <td class="mono">${escapeHtml(v.key)}</td>
+      <td class="mono muted">${v.is_delete_marker ? '删除标记' : v.version_id.slice(0, 12)}</td>
+      <td>${v.is_delete_marker ? '-' : fmtBytes(v.size)}</td>
+      <td>${v.is_current ? '<span class="pill ok">当前</span>' : '<span class="pill">历史</span>'}</td>
+      <td class="muted">${v.created_at.slice(0, 19)}</td>
+      <td style="text-align:right"><button class="ghost danger" data-dv="${escapeAttr(v.key)}" data-ver="${v.version_id}">物理删除</button></td>
+    </tr>`).join('') : '<tr><td colspan="6" class="empty">暂无版本数据</td></tr>';
+    rows.querySelectorAll('[data-dv]').forEach(b => b.onclick = async () => {
+      if (!confirm('物理删除该版本？引用的分片将由 GC 延迟回收。')) return;
+      try {
+        await api(`/v1/buckets/${bucket}/objects/${encodeKey(b.dataset.dv)}?versionId=${b.dataset.ver}`, { method: 'DELETE' });
+        toast('版本已删除'); loadObjects(false); loadOverview();
+      } catch (e) { toast(e.message, true); }
+    });
+  } catch (e) { /* 版本列表失败不影响主列表 */ }
+}
+
+async function downloadObject(key) {
+  try {
+    const res = await fetch(`/v1/buckets/${state.bucket}/objects/${encodeKey(key)}`, {
+      headers: { 'Authorization': 'Bearer ' + state.token }
+    });
+    if (!res.ok) throw new Error('下载失败 HTTP ' + res.status);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = key.split('/').pop();
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) { toast(e.message, true); }
+}
+
+async function deleteObject(key) {
+  if (!confirm(`删除 ${key}？版本化桶会写入删除标记。`)) return;
+  try {
+    await api(`/v1/buckets/${state.bucket}/objects/${encodeKey(key)}`, { method: 'DELETE' });
+    toast('已删除'); loadObjects(false); loadOverview();
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ---------------- 上传 ---------------- */
+function xhrPut(url, file, headers, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url, true);
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch (e) {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error((data && data.error ? data.error.message : 'HTTP ' + xhr.status)));
+    };
+    xhr.onerror = () => reject(new Error('网络错误'));
+    xhr.send(file);
+  });
+}
+
+el('doPut').onclick = async () => {
+  const bucket = el('uploadBucket').value;
+  const key = el('uploadKey').value.trim() || (el('uploadFile').files[0] || {}).name;
+  const file = el('uploadFile').files[0];
+  if (!bucket || !key || !file) return toast('请选择桶、填写键并选择文件', true);
+  try {
+    el('putBar').style.width = '0%';
+    const data = await xhrPut(`/v1/buckets/${bucket}/objects/${encodeKey(key)}`, file,
+      { 'Authorization': 'Bearer ' + state.token, 'Content-Type': file.type || 'application/octet-stream' },
+      (p) => el('putBar').style.width = (p * 100).toFixed(0) + '%');
+    el('putResult').textContent = `etag=${data.etag}  size=${data.size}  分片=${data.chunks}（新写 ${data.chunks_written}，去重 ${data.chunks_deduped}）`;
+    toast('上传完成');
+    state.bucket = bucket; loadOverview();
+  } catch (e) { toast(e.message, true); }
+};
+
+el('doMp').onclick = async () => {
+  const bucket = el('mpBucket').value;
+  const key = el('mpKey').value.trim() || (el('mpFile').files[0] || {}).name;
+  const file = el('mpFile').files[0];
+  if (!bucket || !key || !file) return toast('请选择桶、填写键并选择文件', true);
+  try {
+    const init = await api(`/v1/buckets/${bucket}/uploads?key=${encodeURIComponent(key)}`, { method: 'POST' });
+    const partSize = 2 * 1024 * 1024;
+    const total = Math.ceil(file.size / partSize) || 1;
+    const headers = { 'Authorization': 'Bearer ' + state.token, 'Content-Type': 'application/octet-stream' };
+    for (let i = 0; i < total; i++) {
+      const blob = file.slice(i * partSize, Math.min((i + 1) * partSize, file.size));
+      await xhrPut(`/v1/uploads/${init.upload_id}/parts/${i + 1}`, blob, headers,
+        (p) => el('mpBar').style.width = (((i + p) / total) * 100).toFixed(0) + '%');
+    }
+    const done = await api(`/v1/uploads/${init.upload_id}/complete`, { method: 'POST' });
+    el('mpBar').style.width = '100%';
+    el('mpResult').textContent = `upload=${init.upload_id}  etag=${done.etag}  size=${done.size}  分片=${done.chunks}`;
+    toast('分片上传完成');
+    state.bucket = bucket; loadOverview();
+  } catch (e) { toast(e.message, true); }
+};
+
+/* ---------------- 预签名 / 密钥 ---------------- */
+el('doPresign').onclick = async () => {
+  const bucket = el('bucketSelect').value || state.bucket;
+  try {
+    const data = await api('/v1/presign', {
+      method: 'POST',
+      json: { bucket, key: el('pKey').value.trim(), method: el('pMethod').value, ttl: 600 }
+    });
+    el('presignOut').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    el('presignOut').textContent = '签发失败：' + e.message + '\n（管理令牌不具备 access_key，需先用访问密钥）';
+  }
+};
+
+el('doIssueKey').onclick = async () => {
+  let grants;
+  try { grants = JSON.parse(el('keyGrants').value); } catch (e) { return toast('grants 不是合法 JSON', true); }
+  try {
+    const data = await api('/admin/keys', {
+      method: 'POST', json: { label: el('keyLabel').value || 'unnamed', grants }
+    });
+    el('keyOut').textContent = JSON.stringify(data, null, 2);
+    toast('密钥已签发，请立即保存 secret');
+  } catch (e) { toast(e.message, true); }
+};
+
+/* ---------------- 运维 ---------------- */
+document.querySelectorAll('[data-job]').forEach(btn => btn.onclick = async () => {
+  el('jobOut').textContent = '运行中…';
+  try {
+    const data = await api('/admin/maintenance/' + btn.dataset.job, { method: 'POST' });
+    el('jobOut').textContent = JSON.stringify(data, null, 2);
+    toast('任务完成：' + btn.dataset.job);
+    loadOverview();
+  } catch (e) {
+    el('jobOut').textContent = '失败：' + e.message;
+    toast(e.message, true);
+  }
+});
+
+async function loadAudit() {
+  try {
+    const data = await api('/admin/audit?limit=25');
+    el('auditRows').innerHTML = data.items.map(a => `<tr>
+      <td class="muted mono">${a.ts.slice(11, 19)}</td>
+      <td>${escapeHtml(a.actor)}</td>
+      <td class="mono">${a.action}</td>
+      <td class="mono muted">${escapeHtml((a.bucket || '-') + (a.key ? '/' + a.key : ''))}</td>
+      <td>${a.status < 400 ? '<span class="pill ok">' + a.status + '</span>' : '<span class="pill bad">' + a.status + '</span>'}</td>
+      <td class="mono muted" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${escapeHtml(JSON.stringify(a.detail))}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty">暂无记录</td></tr>';
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ---------------- 路由 ---------------- */
+async function render() {
+  const view = (location.hash || '#overview').slice(1);
+  document.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== view);
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('active', a.dataset.view === view));
+  if (view === 'objects') {
+    // 必须等桶列表就绪，否则下拉框为空、对象列表无从加载
+    await loadOverview();
+    if (state.initialBucket) {
+      el('bucketSelect').value = state.initialBucket;
+      state.initialBucket = '';
+    }
+    await loadObjects(true);
+  } else if (view === 'ops') {
+    loadAudit();
+    loadOverview();
+  } else {
+    loadOverview();
+  }
+}
+
+function encodeKey(key) { return key.split('/').map(encodeURIComponent).join('/'); }
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return escapeHtml(s).replace(/\n/g, ' '); }
+
+el('saveToken').onclick = () => {
+  state.token = el('token').value.trim();
+  localStorage.setItem('stratum_token', state.token);
+  toast('令牌已保存到本地');
+  loadOverview();
+};
+el('createBucket').onclick = async () => {
+  const name = el('newBucket').value.trim();
+  if (!name) return toast('请输入桶名', true);
+  try {
+    await api('/v1/buckets', { method: 'POST', json: { name, versioning: el('newBucketVersioning').value === '1' } });
+    el('newBucket').value = '';
+    toast('桶已创建'); loadOverview();
+  } catch (e) { toast(e.message, true); }
+};
+el('reloadObjects').onclick = () => loadObjects(true);
+el('bucketSelect').onchange = () => loadObjects(true);
+el('prevPage').onclick = () => {
+  if (!state.prevStack.length) return;
+  state.nextToken = state.prevStack.pop();
+  loadObjects(false);
+};
+el('nextPage').onclick = () => {
+  if (!state.nextTokenNext) return;
+  state.prevStack.push(state.nextToken);
+  state.nextToken = state.nextTokenNext;
+  loadObjects(false);
+};
+el('reloadAudit').onclick = loadAudit;
+window.addEventListener('hashchange', render);
+
+/* 支持 #token=xxx 直接登录（hash 不会发往服务端，仅存本地） */
+const rawHash = location.hash.slice(1);
+if (rawHash.startsWith('token=')) {
+  const parts = rawHash.split('&');
+  state.token = decodeURIComponent(parts[0].slice(6));
+  localStorage.setItem('stratum_token', state.token);
+  el('token').value = state.token;
+  const view = (parts.find(p => p.startsWith('v=')) || 'v=overview').slice(2) || 'overview';
+  const bucketParam = parts.find(p => p.startsWith('b='));
+  if (bucketParam) state.initialBucket = decodeURIComponent(bucketParam.slice(2));
+  history.replaceState(null, '', location.pathname + '#' + view);
+}
+
+el('token').value = state.token;
+render();
+setInterval(() => { if (location.hash === '#overview' && state.token) loadOverview(); }, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+name: stratum
+
+# 同一份镜像跑两个角色：api（对外）与 worker（后台维护）。
+# 二者共享具名卷中的元数据库与 CAS 目录，通过 SQLite WAL + outbox 租约协作，
+# 不需要 Redis / MQ 之类的额外中间件即可演示「读写分离的进程边界」。
+services:
+  api:
+    build: .
+    image: stratum:0.1.0
+    command: ["uvicorn", "stratum.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      STRATUM_DATA_DIR: /var/lib/stratum
+      STRATUM_ADMIN_TOKEN: ${STRATUM_ADMIN_TOKEN:-change-me-admin-token}
+      STRATUM_CHUNK_SIZE: ${STRATUM_CHUNK_SIZE:-1048576}
+      STRATUM_GC_GRACE_SECONDS: ${STRATUM_GC_GRACE_SECONDS:-900}
+      STRATUM_MAX_OBJECT_BYTES: ${STRATUM_MAX_OBJECT_BYTES:-268435456}
+      STRATUM_PUBLIC_BASE_URL: ${STRATUM_PUBLIC_BASE_URL:-http://127.0.0.1:8080}
+    ports:
+      - "8080:8080"
+    volumes:
+      - stratum-data:/var/lib/stratum
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2).status==200 else 1)"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    build: .
+    image: stratum:0.1.0
+    command: ["python", "-m", "stratum.worker", "--jobs", "lifecycle,gc,webhook", "--interval", "5", "--scrub-every", "12"]
+    environment:
+      STRATUM_DATA_DIR: /var/lib/stratum
+      STRATUM_ADMIN_TOKEN: ${STRATUM_ADMIN_TOKEN:-change-me-admin-token}
+      STRATUM_GC_GRACE_SECONDS: ${STRATUM_GC_GRACE_SECONDS:-900}
+    volumes:
+      - stratum-data:/var/lib/stratum
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  stratum-data:
