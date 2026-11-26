@@ -245,6 +245,7 @@ curl -s localhost:8080/metrics | grep stratum_
 ## 9. 性能（实测，非目标值）
 
 环境：Windows 11 / Python 3.12.10 / uvicorn 单进程 / SQLite WAL / 本地 NVMe；对象 64 KiB，8 并发，各跑 6 s。
+（`STRATUM_FSYNC_CHUNKS=0`；实测该开关对结果无显著影响，瓶颈定位过程见架构说明 §12。）
 
 | 阶段 | 请求数 | 吞吐 | p50 | p95 | p99 | 错误 |
 | --- | --- | --- | --- | --- | --- | --- |
